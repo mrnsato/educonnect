@@ -1,0 +1,39 @@
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: educonnect-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: educonnect
+      POSTGRES_USER: educonnect_user
+      POSTGRES_PASSWORD: educonnect_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U educonnect_user -d educonnect"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: educonnect-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://educonnect_user:educonnect_pass@database:5432/educonnect
+    ports:
+      - "3001:3001"
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+
+volumes:
+  pgdata:
